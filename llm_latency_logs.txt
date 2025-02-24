@@ -1,0 +1,5 @@
+
+
+2025-02-23 21:26:43,788 - INFO - Tiempo de latencia del LLM: 2.74 segundos
+
+
