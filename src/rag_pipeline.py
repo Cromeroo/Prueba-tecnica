@@ -4,34 +4,31 @@ import streamlit as st
 from typing import TypedDict
 import time
 import logging
+import vertexai
 
-# Configuración de un logger dedicado
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\danil\OneDrive\Escritorio\RAG\vertex2-stately-moon.json"
+
 logger = logging.getLogger("LLMLogger")
 logger.setLevel(logging.INFO)
-# Handler para el archivo
 file_handler = logging.FileHandler("llm_latency_logs.txt", mode="a", encoding="utf-8")
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
-# Handler para la consola
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-# LangChain y Google Vertex
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_vertexai.embeddings import VertexAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_google_vertexai import VertexAI
 
-# Rutas y creación de carpetas
 docs_path = "data/documents/"
 vector_db_path = "data/vector_store/"
 os.makedirs(docs_path, exist_ok=True)
 os.makedirs(vector_db_path, exist_ok=True)
 
-# Tipo de diccionario para el estado
 class RAGState(TypedDict):
     query: str
     docs: list
@@ -63,6 +60,11 @@ def load_and_process_documents():
 
 def create_vector_store(texts):
     try:
+        vertexai.init(
+            project="stately-moon-451804-a9", 
+            location="us-central1"
+        )
+        
         embeddings = VertexAIEmbeddings(model_name="textembedding-gecko")
         if os.path.exists(vector_db_path):
             print("🔄 Reiniciando la base de datos vectorial...")
@@ -75,20 +77,43 @@ def create_vector_store(texts):
         print("✅ Base vectorial creada correctamente.")
         return vector_db
     except Exception as e:
-        print(f"❌ Error en create_vector_store(): {e}")
+        print(f"❌ Error detallado en create_vector_store(): {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def build_rag_chain(vector_db):
-    llm = VertexAI(model_name="gemini-pro")
-
+    if vector_db is None:
+        print(" Error: La base de datos vectorial es None. No se puede construir la cadena RAG.")
+        
+        def error_pipeline(input_state: dict) -> dict:
+            return {
+                "query": input_state.get("query", ""),
+                "docs": [],
+                "response": " Error: Base de datos vectorial no disponible. Por favor, sube documentos primero."
+            }
+        
+        return error_pipeline, "Error: Base de datos vectorial no disponible"
+    
+    vertexai.init(
+        project="stately-moon-451804-a9",
+        location="us-central1"
+    )
+    
+    llm = VertexAI(model_name="gemini-2.5-flash") 
     def retrieve(state: dict) -> dict:
         query = state["query"]
-        docs = vector_db.similarity_search(query)
-        print("\n🔎 Documentos recuperados:")
-        for doc in docs:
-            print(f"- {doc.page_content[:300]}...")
-        state["docs"] = docs
-        return state
+        try:
+            docs = vector_db.similarity_search(query)
+            print("\n🔎 Documentos recuperados:")
+            for doc in docs:
+                print(f"- {doc.page_content[:300]}...")
+            state["docs"] = docs
+            return state
+        except Exception as e:
+            print(f"❌ Error en retrieve: {e}")
+            state["docs"] = []
+            return state
 
     def generate(state: dict) -> dict:
         query = state["query"]
@@ -116,7 +141,6 @@ def build_rag_chain(vector_db):
             end_time = time.perf_counter()
             latency = end_time - start_time
             logger.info(f"Tiempo de latencia del LLM: {latency:.2f} segundos")
-            # Forzamos el flush de los handlers para que se guarden de inmediato
             for handler in logger.handlers:
                 handler.flush()
             print(f"💬 Respuesta obtenida: {raw_response}")

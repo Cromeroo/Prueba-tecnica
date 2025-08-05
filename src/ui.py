@@ -47,7 +47,7 @@ st.markdown(
 # Definir la ruta donde se guardarán los documentos
 docs_path = "data/documents/"
 
-# Esto debe elliminar la carpeta y su contenido si existe (para evitar archivos anteriores)
+# Esto debe elliminar la carpeta y su contenido si existe 
 if os.path.exists(docs_path):
     shutil.rmtree(docs_path)
 os.makedirs(docs_path, exist_ok=True)
@@ -68,14 +68,29 @@ if uploaded_files:
 
 # Botón para entrenar el modelo
 if st.button("Entrenar modelo", key="train_button"):
-    with st.spinner("🚀 Procesando documentos y entrenando el modelo..."):
-        texts = load_and_process_documents()
-        st.write("DEBUG: Número de fragmentos extraídos:", len(texts))
-        vector_db = create_vector_store(texts)
-        st.write("DEBUG: Base vectorial:", vector_db)
-        pipeline, _ = build_rag_chain(vector_db)
-        st.session_state["rag_chain"] = pipeline
-    st.success("🎉 Modelo entrenado con éxito. Ahora puedes hacer preguntas.")
+    st.info("🔄 Iniciando entrenamiento...")
+    try:
+        with st.spinner("🚀 Procesando documentos y entrenando el modelo..."):
+            texts = load_and_process_documents()
+            st.write("DEBUG: Número de fragmentos extraídos:", len(texts))
+            
+            if len(texts) == 0:
+                st.error("❌ No se extrajeron fragmentos de texto. Verifica los PDFs.")
+                st.stop()
+            
+            vector_db = create_vector_store(texts)
+            st.write("DEBUG: Base vectorial:", vector_db)
+            
+            if vector_db is None:
+                st.error("❌ Falló la creación de la base vectorial.")
+                st.stop()
+            
+            pipeline, _ = build_rag_chain(vector_db)
+            st.session_state["rag_chain"] = pipeline
+            st.write("DEBUG: Pipeline asignado:", pipeline)
+        st.success("🎉 Modelo entrenado con éxito. Ahora puedes hacer preguntas.")
+    except Exception as e:
+        st.error(f"❌ Error durante el entrenamiento: {e}")
 
 # Campo de entrada para la consulta
 query = st.text_input("❓ Haz una pregunta sobre los documentos:", key="query_input")
@@ -83,12 +98,24 @@ query = st.text_input("❓ Haz una pregunta sobre los documentos:", key="query_i
 # Botón para consultar
 if st.button("Consultar", key="consult_button"):
     if "rag_chain" in st.session_state and query.strip():
-        with st.spinner("🔍 Consultando..."):
-            result_state = st.session_state["rag_chain"]({"query": query})
-            if result_state and isinstance(result_state, dict) and "response" in result_state:
-                st.markdown("**Respuesta:**")
-                st.write(result_state["response"])
-            else:
-                st.warning(f"⚠️ El objeto `result_state` no es válido: {result_state}")
+        # AGREGAR DEBUG AQUÍ
+        if st.session_state["rag_chain"] is None:
+            st.error("❌ RAG Chain es None. El entrenamiento falló.")
+        else:
+            st.info(f"✅ RAG Chain disponible: {type(st.session_state['rag_chain'])}")
+            with st.spinner("🔍 Consultando..."):
+                result_state = st.session_state["rag_chain"]({"query": query})
+                if result_state and isinstance(result_state, dict) and "response" in result_state:
+                    st.markdown("**Respuesta:**")
+                    st.write(result_state["response"])
+                else:
+                    st.warning(f"⚠️ El objeto `result_state` no es válido: {result_state}")
     else:
         st.warning("⚠️ No hay cadena RAG entrenada o la pregunta está vacía.")
+        # AGREGAR MÁS DEBUG mas masssssssssssssss no sé que hacer acá quedo par amañana
+        if "rag_chain" not in st.session_state:
+            st.error("❌ 'rag_chain' no existe en session_state")
+        elif st.session_state["rag_chain"] is None:
+            st.error("❌ 'rag_chain' es None en session_state")
+        if not query.strip():
+            st.error("❌ La pregunta está vacía")

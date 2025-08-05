@@ -3,3 +3,8 @@
 2025-02-23 21:26:43,788 - INFO - Tiempo de latencia del LLM: 2.74 segundos
 
 
+2025-08-05 12:19:43,994 - ERROR - Error al invocar VertexAI después de 31.49 segundos: 404 Publisher Model `projects/stately-moon-451804-a9/locations/us-central1/publishers/google/models/gemini-pro` was not found or your project does not have access to it. Please ensure you are using a valid model version. For more information, see: https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions
+2025-08-05 12:23:02,672 - ERROR - Error al invocar VertexAI después de 31.09 segundos: 404 Publisher Model `projects/stately-moon-451804-a9/locations/us-central1/publishers/google/models/gemini-pro` was not found or your project does not have access to it. Please ensure you are using a valid model version. For more information, see: https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions
+2025-08-05 12:23:02,672 - ERROR - Error al invocar VertexAI después de 31.09 segundos: 404 Publisher Model `projects/stately-moon-451804-a9/locations/us-central1/publishers/google/models/gemini-pro` was not found or your project does not have access to it. Please ensure you are using a valid model version. For more information, see: https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions
+2025-08-05 12:24:33,667 - INFO - Tiempo de latencia del LLM: 15.62 segundos
+2025-08-05 12:26:04,756 - INFO - Tiempo de latencia del LLM: 10.89 segundos
